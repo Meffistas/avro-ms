@@ -37,7 +37,7 @@ namespace Avro.Test
             var schema = (LogicalSchema)Schema.Parse("{\"type\": \"bytes\", \"logicalType\": \"decimal\", \"precision\": 4, \"scale\": 2 }");
 
             var avroDecimal = new Avro.Util.Decimal();
-            var decimalVal = (AvroDecimal)decimal.Parse(s);
+            var decimalVal = (AvroDecimal)decimal.Parse(s, new CultureInfo("en-US"));
 
             var convertedDecimalVal = (AvroDecimal)avroDecimal.ConvertToLogicalValue(avroDecimal.ConvertToBaseValue(decimalVal, schema), schema);
 

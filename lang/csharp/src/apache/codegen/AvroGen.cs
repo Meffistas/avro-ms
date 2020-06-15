@@ -120,7 +120,7 @@ namespace Avro
             }
 
             if (inputFiles.Any())
-                GenSchema(inputFiles, outputDir, namespaceMapping);
+                rc = GenSchema(inputFiles, outputDir, namespaceMapping);
             else if (!isValid)
             {
                 Usage();
@@ -194,10 +194,13 @@ namespace Avro
             catch (Exception ex)
             {
                 Console.WriteLine("Exception occurred. " + ex.Message);
+                return 1;
             }
+
+            return 0;
         }
 
-        static void GenSchema(List<string> infiles, string outdir,
+        static int GenSchema(List<string> infiles, string outdir,
             IEnumerable<KeyValuePair<string, string>> namespaceMapping)
         {
             try
