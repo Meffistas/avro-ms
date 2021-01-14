@@ -5,7 +5,7 @@
   </PropertyGroup>
 
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
-    <Exec Command="$(ProjectDir)tool\avrogenms -ms $(ProjectDir)avroFiles\schema01.avsc;$(ProjectDir)avroFiles\schema02.avsc $(ProjectDir)generated" />
+    <Exec Command="$(ProjectDir)..\apache\codegen\bin\Debug\netcoreapp3.1\avrogen -ms $(ProjectDir)avroFiles\schema01.avsc;$(ProjectDir)avroFiles\schema02.avsc $(ProjectDir)generated" />
   </Target>
 
   <ItemGroup>

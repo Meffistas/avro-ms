@@ -220,7 +220,7 @@ namespace Avro
         }
 
         /// <summary>
-        /// 
+        /// Parses a given JSON string to create a new schema object with previously read schemas
         /// </summary>
         /// <param name="json"></param>
         /// <param name="schemaNames">schemas already read</param>
