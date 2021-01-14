@@ -1,5 +1,17 @@
 # Apache Avro™
 
+[![Test C](https://github.com/apache/avro/workflows/Test%20C/badge.svg)][Test C]
+[![Test C#](https://github.com/apache/avro/workflows/Test%20C%23/badge.svg)][Test C#]
+[![Test C++](https://github.com/apache/avro/workflows/Test%20C++/badge.svg)][Test C++]
+[![Test Java](https://github.com/apache/avro/workflows/Test%20Java/badge.svg)][Test Java]
+[![Test JavaScript](https://github.com/apache/avro/workflows/Test%20JavaScript/badge.svg)][Test JavaScript]
+[![Test Perl](https://github.com/apache/avro/workflows/Test%20Perl/badge.svg)][Test Perl]
+[![Test Ruby](https://github.com/apache/avro/workflows/Test%20Ruby/badge.svg)][Test Ruby]
+[![Test Python](https://github.com/apache/avro/workflows/Test%20Python/badge.svg)][Test Python]
+[![Test PHP](https://github.com/apache/avro/workflows/Test%20PHP/badge.svg)][Test PHP]
+
+-----
+
 Apache Avro™ is a data serialization system.
 
 Learn more about Avro, please visit our website at:

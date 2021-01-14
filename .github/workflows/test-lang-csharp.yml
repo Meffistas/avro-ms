@@ -40,6 +40,7 @@ jobs:
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
           restore-keys: |
             ${{ runner.os }}-nuget-
+
       - name: Lint
         run: ./build.sh lint
 
@@ -58,6 +59,7 @@ jobs:
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
+
       - name: Install Java Avro for Interop Test
         working-directory: .
         run: mvn -B install -DskipTests
