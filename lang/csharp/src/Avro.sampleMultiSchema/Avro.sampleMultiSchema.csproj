@@ -9,7 +9,7 @@
   </Target>
 
   <ItemGroup>
-    <PackageReference Include="apache.avro" Version="1.9.1" />
+    <PackageReference Include="apache.avro" Version="1.10.2" />
   </ItemGroup>
 
 </Project>
