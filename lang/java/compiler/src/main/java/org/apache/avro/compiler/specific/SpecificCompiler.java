@@ -95,7 +95,7 @@ public class SpecificCompiler {
   protected static final int MAX_FIELD_PARAMETER_UNIT_COUNT = JVM_METHOD_ARG_LIMIT - 1;
 
   public enum FieldVisibility {
-    PUBLIC, PUBLIC_DEPRECATED, PRIVATE
+    PUBLIC, PRIVATE
   }
 
   void addLogicalTypeConversions(SpecificData specificData) {
@@ -199,25 +199,17 @@ public class SpecificCompiler {
   }
 
   /**
-   * @return true if the record fields should be marked as deprecated
-   */
-  public boolean deprecatedFields() {
-    return (this.fieldVisibility == FieldVisibility.PUBLIC_DEPRECATED);
-  }
-
-  /**
    * @return true if the record fields should be public
    */
   public boolean publicFields() {
-    return (this.fieldVisibility == FieldVisibility.PUBLIC
-        || this.fieldVisibility == FieldVisibility.PUBLIC_DEPRECATED);
+    return this.fieldVisibility == FieldVisibility.PUBLIC;
   }
 
   /**
    * @return true if the record fields should be private
    */
   public boolean privateFields() {
-    return (this.fieldVisibility == FieldVisibility.PRIVATE);
+    return this.fieldVisibility == FieldVisibility.PRIVATE;
   }
 
   /**
@@ -289,48 +281,40 @@ public class SpecificCompiler {
   }
 
   public Collection<String> getUsedConversionClasses(Schema schema) {
-    LinkedHashMap<String, Conversion<?>> classnameToConversion = new LinkedHashMap<>();
-    for (Conversion<?> conversion : specificData.getConversions()) {
-      classnameToConversion.put(conversion.getConvertedType().getCanonicalName(), conversion);
-    }
     Collection<String> result = new HashSet<>();
-    for (String className : getClassNamesOfPrimitiveFields(schema)) {
-      if (classnameToConversion.containsKey(className)) {
-        result.add(classnameToConversion.get(className).getClass().getCanonicalName());
-      }
+    for (Conversion<?> conversion : getUsedConversions(schema, new HashSet<>(), new HashSet<>())) {
+      result.add(conversion.getClass().getCanonicalName());
     }
     return result;
   }
 
-  private Set<String> getClassNamesOfPrimitiveFields(Schema schema) {
-    Set<String> result = new HashSet<>();
-    getClassNamesOfPrimitiveFields(schema, result, new HashSet<>());
-    return result;
-  }
-
-  private void getClassNamesOfPrimitiveFields(Schema schema, Set<String> result, Set<Schema> seenSchemas) {
+  private Set<Conversion<?>> getUsedConversions(Schema schema, Set<Conversion<?>> result, Set<Schema> seenSchemas) {
     if (seenSchemas.contains(schema)) {
-      return;
+      return result;
     }
+
+    Conversion<?> conversion = specificData.getConversionFor(LogicalTypes.fromSchemaIgnoreInvalid(schema));
+    if (conversion != null)
+      result.add(conversion);
+
     seenSchemas.add(schema);
     switch (schema.getType()) {
     case RECORD:
       for (Schema.Field field : schema.getFields()) {
-        getClassNamesOfPrimitiveFields(field.schema(), result, seenSchemas);
+        getUsedConversions(field.schema(), result, seenSchemas);
       }
       break;
     case MAP:
-      getClassNamesOfPrimitiveFields(schema.getValueType(), result, seenSchemas);
+      getUsedConversions(schema.getValueType(), result, seenSchemas);
       break;
     case ARRAY:
-      getClassNamesOfPrimitiveFields(schema.getElementType(), result, seenSchemas);
+      getUsedConversions(schema.getElementType(), result, seenSchemas);
       break;
     case UNION:
       for (Schema s : schema.getTypes())
-        getClassNamesOfPrimitiveFields(s, result, seenSchemas);
+        getUsedConversions(s, result, seenSchemas);
       break;
     case NULL:
-      break;
     case ENUM:
     case FIXED:
     case STRING:
@@ -340,11 +324,11 @@ public class SpecificCompiler {
     case FLOAT:
     case DOUBLE:
     case BOOLEAN:
-      result.add(javaType(schema, true));
       break;
     default:
       throw new RuntimeException("Unknown type: " + schema);
     }
+    return result;
   }
 
   private void initializeVelocity() {

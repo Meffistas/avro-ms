@@ -17,10 +17,11 @@
  */
 package org.apache.avro.compiler.specific;
 
+import static org.hamcrest.CoreMatchers.hasItem;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertThat;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.equalTo;
 
@@ -35,10 +36,12 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.avro.AvroTypeException;
 import org.apache.avro.LogicalTypes;
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
 import org.apache.avro.generic.GenericData.StringType;
+import org.apache.avro.specific.SpecificData;
 import org.junit.*;
 import org.junit.rules.TemporaryFolder;
 import org.junit.rules.TestName;
@@ -152,7 +155,6 @@ public class TestSpecificCompiler {
   public void testPublicFieldVisibility() throws IOException {
     SpecificCompiler compiler = createCompiler();
     compiler.setFieldVisibility(SpecificCompiler.FieldVisibility.PUBLIC);
-    assertFalse(compiler.deprecatedFields());
     assertTrue(compiler.publicFields());
     assertFalse(compiler.privateFields());
     compiler.compileToDestination(this.src, this.OUTPUT_DIR.getRoot());
@@ -229,29 +231,9 @@ public class TestSpecificCompiler {
   }
 
   @Test
-  public void testPublicDeprecatedFieldVisibility() throws IOException {
-    SpecificCompiler compiler = createCompiler();
-    compiler.setFieldVisibility(SpecificCompiler.FieldVisibility.PUBLIC_DEPRECATED);
-    assertTrue(compiler.deprecatedFields());
-    assertTrue(compiler.publicFields());
-    assertFalse(compiler.privateFields());
-    compiler.compileToDestination(this.src, this.OUTPUT_DIR.getRoot());
-    assertTrue(this.outputFile.exists());
-    try (BufferedReader reader = new BufferedReader(new FileReader(this.outputFile))) {
-      String line;
-      while ((line = reader.readLine()) != null) {
-        // No line, once trimmed, should start with a public field declaration
-        line = line.trim();
-        assertFalse("Line started with a public field declaration: " + line, line.startsWith("public int value"));
-      }
-    }
-  }
-
-  @Test
   public void testPrivateFieldVisibility() throws IOException {
     SpecificCompiler compiler = createCompiler();
     compiler.setFieldVisibility(SpecificCompiler.FieldVisibility.PRIVATE);
-    assertFalse(compiler.deprecatedFields());
     assertFalse(compiler.publicFields());
     assertTrue(compiler.privateFields());
     compiler.compileToDestination(this.src, this.OUTPUT_DIR.getRoot());
@@ -549,6 +531,25 @@ public class TestSpecificCompiler {
   }
 
   @Test
+  public void testGetUsedConversionClassesForNullableTimestamps() throws Exception {
+    SpecificCompiler compiler = createCompiler();
+
+    // timestamp-millis and timestamp-micros used to cause collisions when both were
+    // present or added as converters (AVRO-2481).
+    final Schema tsMillis = LogicalTypes.timestampMillis().addToSchema(Schema.create(Schema.Type.LONG));
+    final Schema tsMicros = LogicalTypes.timestampMicros().addToSchema(Schema.create(Schema.Type.LONG));
+
+    final Collection<String> conversions = compiler.getUsedConversionClasses(SchemaBuilder.record("WithTimestamps")
+        .fields().name("tsMillis").type(tsMillis).noDefault().name("tsMillisOpt").type().unionOf().nullType().and()
+        .type(tsMillis).endUnion().noDefault().name("tsMicros").type(tsMicros).noDefault().name("tsMicrosOpt").type()
+        .unionOf().nullType().and().type(tsMicros).endUnion().noDefault().endRecord());
+
+    Assert.assertEquals(2, conversions.size());
+    assertThat(conversions, hasItem("org.apache.avro.data.TimeConversions.TimestampMillisConversion"));
+    assertThat(conversions, hasItem("org.apache.avro.data.TimeConversions.TimestampMicrosConversion"));
+  }
+
+  @Test
   public void testGetUsedConversionClassesForNullableLogicalTypesInNestedRecord() throws Exception {
     SpecificCompiler compiler = createCompiler();
 
@@ -608,12 +609,69 @@ public class TestSpecificCompiler {
     Assert.assertEquals("org.apache.avro.data.TimeConversions.DateConversion", usedConversionClasses.iterator().next());
   }
 
+  /**
+   * Checks that identifiers that may cause problems in Java code will compile
+   * correctly when used in a generated specific record.
+   *
+   * @param schema                         A schema with an identifier __test__
+   *                                       that will be replaced.
+   * @param throwsTypeExceptionOnPrimitive If true, using a reserved word that is
+   *                                       also an Avro primitive type name must
+   *                                       throw an exception instead of
+   *                                       generating code.
+   * @param dstDirPrefix                   Where to generate the java code before
+   *                                       compiling.
+   */
+  public void testManglingReservedIdentifiers(String schema, boolean throwsTypeExceptionOnPrimitive,
+      String dstDirPrefix) throws IOException {
+    for (String reserved : SpecificData.RESERVED_WORDS) {
+      try {
+        Schema s = new Schema.Parser().parse(schema.replace("__test__", reserved));
+        assertCompilesWithJavaCompiler(new File(OUTPUT_DIR.getRoot(), dstDirPrefix + "_" + reserved),
+            new SpecificCompiler(s).compile());
+      } catch (AvroTypeException e) {
+        if (!(throwsTypeExceptionOnPrimitive && e.getMessage().contains("Schemas may not be named after primitives")))
+          throw e;
+      }
+    }
+  }
+
   @Test
-  public void testPackageNameScape() throws Exception {
-    Schema unionTypesWithMultipleFields = new Schema.Parser()
-        .parse(new File("src/test/resources/simple_record_for_scape.avsc"));
-    assertCompilesWithJavaCompiler(new File(this.outputFile, name.getMethodName()),
-        new SpecificCompiler(unionTypesWithMultipleFields).compile());
+  public void testMangleRecordName() throws Exception {
+    testManglingReservedIdentifiers(
+        SchemaBuilder.record("__test__").fields().requiredInt("field").endRecord().toString(), true,
+        name.getMethodName());
+  }
+
+  @Test
+  public void testMangleRecordNamespace() throws Exception {
+    testManglingReservedIdentifiers(
+        SchemaBuilder.record("__test__.Record").fields().requiredInt("field").endRecord().toString(), false,
+        name.getMethodName());
+  }
+
+  @Test
+  public void testMangleField() throws Exception {
+    testManglingReservedIdentifiers(
+        SchemaBuilder.record("Record").fields().requiredInt("__test__").endRecord().toString(), false,
+        name.getMethodName());
+  }
+
+  @Test
+  public void testMangleEnumName() throws Exception {
+    testManglingReservedIdentifiers(SchemaBuilder.enumeration("__test__").symbols("reserved").toString(), true,
+        name.getMethodName());
+  }
+
+  @Test
+  public void testMangleEnumSymbol() throws Exception {
+    testManglingReservedIdentifiers(SchemaBuilder.enumeration("Enum").symbols("__test__").toString(), false,
+        name.getMethodName());
+  }
+
+  @Test
+  public void testMangleFixedName() throws Exception {
+    testManglingReservedIdentifiers(SchemaBuilder.fixed("__test__").size(2).toString(), true, name.getMethodName());
   }
 
   @Test

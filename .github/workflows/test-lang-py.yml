@@ -21,6 +21,7 @@ on:
   pull_request:
     branches: [ master ]
     paths:
+    - .github/workflows/test-lang-py.yml
     - lang/py/**
 
 defaults:
@@ -105,6 +106,7 @@ jobs:
       - name: Install Dependencies
         run: |
           python3 -m pip install --upgrade pip setuptools tox-wheel
+          python3 -m pip install python-snappy zstandard
 
       - name: Cache Local Maven Repository
         uses: actions/cache@v2
