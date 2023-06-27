@@ -23,6 +23,7 @@
     <AssemblyName>Avro.perf</AssemblyName>
     <RootNamespace>Avro.perf</RootNamespace>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <TargetFrameworks>net6.0</TargetFrameworks>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)'=='Release'">

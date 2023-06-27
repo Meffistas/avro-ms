@@ -67,7 +67,7 @@ namespace Avro.Util
         {
             try
             {
-                if (!_logicalTypes.TryGetValue(schema.LogicalTypeName, out LogicalType logicalType))
+                if (!_logicalTypes.TryGetValue(schema.LogicalTypeName.ToLowerInvariant(), out LogicalType logicalType))
                     throw new AvroTypeException("Logical type '" + schema.LogicalTypeName + "' is not supported.");
 
                 logicalType.ValidateSchema(schema);

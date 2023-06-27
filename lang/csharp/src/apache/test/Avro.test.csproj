@@ -25,6 +25,7 @@
     <AssemblyName>Avro.test</AssemblyName>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <GenerateProgramFile>false</GenerateProgramFile>
+    <TargetFrameworks>net6.0</TargetFrameworks>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)'=='Release'">
